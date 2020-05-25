@@ -49,6 +49,9 @@ endif
 FAILPOINT_ENABLE  := $$(find $$PWD/ -type d | grep -vE "(\.git|bin)" | xargs $(GOBIN)/failpoint-ctl enable)
 FAILPOINT_DISABLE := $$(find $$PWD/ -type d | grep -vE "(\.git|bin)" | xargs $(GOBIN)/failpoint-ctl disable)
 
+# grep -rnw --exclude-dir={.git,doc} --exclude=Makefile . -e +kubebuilder | cut -d'/' -f2 | sort -u | awk '{ printf "paths=\"./%s/...\" ", $1}'
+CONTROLLER_GEN_PATHS := paths="./api/..." paths="./cmd/..." paths="./config/..." paths="./controllers/..." paths="./pkg/..."
+
 BUILD_TAGS ?=
 
 ifeq ($(SWAGGER),1)
@@ -137,7 +140,7 @@ install: manifests
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: $(GOBIN)/controller-gen
-	$< $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$< $(CRD_OPTIONS) rbac:roleName=manager-role webhook $(CONTROLLER_GEN_PATHS) output:crd:artifacts:config=config/crd/bases
 
 # Run go fmt against code
 fmt: groupimports
@@ -237,7 +240,7 @@ lint: $(GOBIN)/revive
 
 # Generate code
 generate: $(GOBIN)/controller-gen
-	$< object:headerFile=./hack/boilerplate.go.txt paths="./..."
+	$< object:headerFile=./hack/boilerplate.go.txt $(CONTROLLER_GEN_PATHS)
 
 yaml: manifests ensure-kustomize
 	$(KUSTOMIZE_BIN) build config/default > manifests/crd.yaml
